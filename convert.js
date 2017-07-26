@@ -1,14 +1,22 @@
-var xml2js = require('xml2js');
-var fs = require('fs');
-var util = require('util');
-var toMarkdown = require('to-markdown');
-var http = require('http');
+const xml2js = require('xml2js');
+const fs = require('fs');
+const util = require('util');
+const toMarkdown = require('to-markdown');
+const http = require('http');
+let exportFile = process.argv.slice(2)[0];
+
+if (!exportFile) {
+	console.log('Usage  : node convert.js <name-of-wordpress-export-file>');
+	console.log('Example: node convert.js export.xml');
+	return;
+}
 
 processExport();
 
 function processExport() {
-	var parser = new xml2js.Parser();
-	fs.readFile('export.xml', function(err, data) {
+	let parser = new xml2js.Parser();
+	console.log(`Reading file ${exportFile}`);
+	fs.readFile(exportFile, function(err, data) {
 		if(err) {
 			console.log('Error: ' + err);
 		}
@@ -20,11 +28,11 @@ function processExport() {
 	    	console.log('Parsed XML');
 	        //console.log(util.inspect(result.rss.channel));
 
-	        var posts = result.rss.channel[0].item;
+	        let posts = result.rss.channel[0].item;
 
 			
 			fs.mkdir('out', function() {
-		        for(var i = 0; i < posts.length; i++) {
+		        for(let i = 0; i < posts.length; i++) {
 	        		processPost(posts[i]);
 		        	//console.log(util.inspect(posts[i]));
 		        }
@@ -36,36 +44,36 @@ function processExport() {
 function processPost(post) {
 	console.log('Processing Post');
 
-	var postTitle = post.title;
+	let postTitle = post.title;
 	console.log('Post title: ' + postTitle);
-	var postDate = new Date(post.pubDate);
+	let postDate = new Date(post.pubDate);
 	console.log('Post Date: ' + postDate);
-	var postData = post['content:encoded'][0];
+	let postData = post['content:encoded'][0];
 	console.log('Post length: ' + postData.length + ' bytes');
-	var slug = post['wp:post_name'];
+	let slug = post['wp:post_name'];
 	console.log('Post slug: ' + slug);
 
 	//Merge categories and tags into tags
-	var categories = [];
+	let categories = [];
 	if (post.category != undefined) {
-		for(var i = 0; i < post.category.length; i++) {
-			var cat = post.category[i]['_'];
+		for(let i = 0; i < post.category.length; i++) {
+			let cat = post.category[i]['_'];
 			if(cat != "Uncategorized")
 				categories.push(cat);
 			//console.log('CATEGORY: ' + util.inspect(post.category[i]['_']));
 		}
 	}
 
-	var fullPath = 'out\\' + postDate.getFullYear() + '\\' + getPaddedMonthNumber(postDate.getMonth() + 1) + '\\' + slug;
+	let fullPath = 'out\\' + postDate.getFullYear() + '\\' + getPaddedMonthNumber(postDate.getMonth() + 1) + '\\' + slug;
 
 	fs.mkdir('out\\' + postDate.getFullYear(), function() {
 		fs.mkdir('out\\' + postDate.getFullYear() + '\\' + getPaddedMonthNumber(postDate.getMonth() + 1), function() {
 			fs.mkdir(fullPath, function() {
 				//Find all images
-				var patt = new RegExp("(?:src=\"(.*?)\")", "gi");
+				let patt = new RegExp("(?:src=\"(.*?)\")", "gi");
 				
-				var m;
-				var matches = [];
+				let m;
+				let matches = [];
 				while((m = patt.exec(postData)) !== null) {
 					matches.push(m[1]);
 					//console.log("Found: " + m[1]);
@@ -73,14 +81,14 @@ function processPost(post) {
 
 
 				if(matches != null && matches.length > 0) {
-					for(var i = 0; i < matches.length; i++) {
+					for(let i = 0; i < matches.length; i++) {
 						//console.log('Post image found: ' + matches[i])
 
-						var url = matches[i];
-						var urlParts = matches[i].split('/');
-						var imageName = urlParts[urlParts.length - 1];
+						let url = matches[i];
+						let urlParts = matches[i].split('/');
+						let imageName = urlParts[urlParts.length - 1];
 
-						var filePath = fullPath + '\\' + imageName;
+						let filePath = fullPath + '\\' + imageName;
 
 						downloadFile(url, filePath);
 
@@ -90,7 +98,7 @@ function processPost(post) {
 					}
 				}
 
-				var markdown = toMarkdown.toMarkdown(postData);
+				let markdown = toMarkdown.toMarkdown(postData);
 
 				//Fix characters that markdown doesn't like
 				// smart single quotes and apostrophe
@@ -115,7 +123,7 @@ function processPost(post) {
 				// ampersand
 				markdown = markdown.replace(/&amp;/g, "&");
 
-				var header = "";
+				let header = "";
 				header += "---\n";
 				header += "layout: post\n";
 				header += "title: " + postTitle + "\n";
@@ -137,8 +145,8 @@ function downloadFile(url, path) {
 	 //console.log("Attempt downloading " + url + " to " + path + ' ' + url.indexOf("https:") );
 	if (url.indexOf("https:")  == -1) {
 		if (url.indexOf(".jpg") >=0 || url.indexOf(".png") >=0 || url.indexOf(".png") >=0) {
-			var file = fs.createWriteStream(path).on('open', function() {
-				var request = http.get(url, function(response) {
+			let file = fs.createWriteStream(path).on('open', function() {
+				let request = http.get(url, function(response) {
 				console.log("Response code: " + response.statusCode);
 				response.pipe(file);
 			}).on('error', function(err) {
